@@ -3,13 +3,16 @@ import math
 import os
 from abc import ABC, abstractmethod
 
-path_to_file = os.path.join(os.path.dirname(__file__), 'items.csv')
+
+class InstantiateCSVError(Exception):
+    pass
 
 
 class Item(ABC):
     """
     Класс для представления товара в магазине.
     """
+    path_to_file = os.path.join(os.path.dirname(__file__), 'items.csv')
     pay_rate = 1.0
     all = []
 
@@ -64,13 +67,22 @@ class Item(ABC):
     def instantiate_from_csv(cls):
         """Читает файл со списком товаров, преобразует
         в объекты класса Item и записывает их в атрибут all"""
-        # Очистка списка all перед записью
-        cls.all.clear()
-        with open(path_to_file, newline='') as csvfile:
-            reader = csv.DictReader(csvfile)
-            for row in reader:
-                item = cls(row['name'], float(row['price']), int(row['quantity']))
-                cls.all.append(item)
+        try:
+            open(Item.path_to_file)
+        except FileNotFoundError:
+            raise FileNotFoundError('Отсутствует файл items.csv')
+        else:
+            cls.all.clear()
+            with open(Item.path_to_file, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    # проверяем наличие значений в словаре row
+                    for value in row.values():
+                        # если значение пустое или отсутствует - вызывается класс-исключение
+                        if not value:
+                            raise InstantiateCSVError('Файл items.csv поврежден')
+                    item = cls(row['name'], float(row['price']), int(row['quantity']))
+                    cls.all.append(item)
 
     @staticmethod
     def string_to_number(number_str):
